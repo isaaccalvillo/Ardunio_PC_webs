@@ -1,9 +1,12 @@
 ﻿from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
 import time
+import eventlet
+eventlet.monkey_patch()  # Patch stdlib for async support with eventlet
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")  # Allow all origins for dev
+# Explicitly specify async_mode='eventlet'
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')  # Allow all origins for dev
 
 # In-memory event log
 event_log = []
@@ -69,5 +72,6 @@ def control_command(data):
 
 # === Run App ===
 if __name__ == '__main__':
-    print("🚀 Flask-SocketIO server starting on http://localhost:5000")
+    print("🚀 Flask-SocketIO server starting on http://0.0.0.0:5000")
+    # Use eventlet's WSGI server through socketio.run()
     socketio.run(app, host='0.0.0.0', port=5000)
