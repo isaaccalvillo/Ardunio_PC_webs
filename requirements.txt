@@ -1,4 +1,4 @@
 Flask
 Flask-SocketIO
-eventlet  # For async WebSocket handling
-gunicorn
+eventlet
+flask-cors
