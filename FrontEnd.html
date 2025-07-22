@@ -1,0 +1,97 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Arduino Event Dashboard</title>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        #status {
+            margin-bottom: 10px;
+        }
+
+        #events {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        li {
+            margin-bottom: 5px;
+        }
+
+        button {
+            margin: 5px 0;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Arduino Event Dashboard</h1>
+    <div id="status">Connecting to backend...</div>
+    <button id="sendHi">Send 'send_hi' Command</button>
+
+    <h2>Incoming Events</h2>
+    <ul id="events"></ul>
+
+    <script>
+        const BACKEND_URL = "https://ardunio-pc-webs.onrender.com";
+        const socket = io(BACKEND_URL + "/ui");
+
+        const statusEl = document.getElementById("status");
+        const eventsEl = document.getElementById("events");
+        const sendHiBtn = document.getElementById("sendHi");
+
+        // Handle socket connection
+        socket.on("connect", () => {
+            statusEl.textContent = "🟢 Connected to backend";
+            console.log("✅ Socket connected");
+        });
+
+        socket.on("disconnect", () => {
+            statusEl.textContent = "🔴 Disconnected";
+            console.log("⚠️ Socket disconnected");
+        });
+
+        // Handle incoming event data
+        socket.on("event_data", (data) => {
+            console.log("📥 Received event_data:", data);
+            const li = document.createElement("li");
+            li.textContent = JSON.stringify(data);
+            eventsEl.prepend(li);
+        });
+
+        // Handle 'Send Hi' button
+        sendHiBtn.onclick = () => {
+            console.log("🔘 Send 'send_hi' clicked");
+            fetch(BACKEND_URL + "/command", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ command: "send_hi" })
+            })
+                .then(async (res) => {
+                    const body = await res.json().catch(() => ({}));
+                    console.log("📬 Response status:", res.status);
+                    console.log("📬 Response body:", body);
+
+                    if (res.ok) {
+                        alert("✅ Command sent!");
+                    } else {
+                        alert("❌ Command failed: " + (body.error || res.statusText));
+                    }
+                })
+                .catch((err) => {
+                    console.error("💥 Fetch error:", err);
+                    alert("Network error: " + err.message);
+                });
+        };
+    </script>
+</body>
+</html>
