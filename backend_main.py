@@ -1,10 +1,14 @@
 ﻿from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
+from flask_cors import CORS  # <-- Import CORS
 import time
 import eventlet
 eventlet.monkey_patch()  # Patch stdlib for async support with eventlet
 
 app = Flask(__name__)
+# Enable CORS for your frontend origins (or * for dev)
+CORS(app, resources={r"/*": {"origins": ["*", "https://yourusername.github.io"]}})  # <-- Add your GitHub Pages URL here
+
 # Explicitly specify async_mode='eventlet'
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')  # Allow all origins for dev
 
@@ -50,20 +54,20 @@ def receive_command():
 # From Devices
 @socketio.on('connect', namespace='/device')
 def device_connect():
-    print("📟 Device connected")
+    print("Device connected")
 
 @socketio.on('disconnect', namespace='/device')
 def device_disconnect():
-    print("📟 Device disconnected")
+    print("Device disconnected")
 
 # From UI
 @socketio.on('connect', namespace='/ui')
 def ui_connect():
-    print("🖥️ UI connected")
+    print("UI connected")
 
 @socketio.on('disconnect', namespace='/ui')
 def ui_disconnect():
-    print("🖥️ UI disconnected")
+    print("UI disconnected")
 
 @socketio.on('control_command', namespace='/ui')
 def control_command(data):
@@ -72,6 +76,6 @@ def control_command(data):
 
 # === Run App ===
 if __name__ == '__main__':
-    print("🚀 Flask-SocketIO server starting on http://0.0.0.0:5000")
+    print("Flask-SocketIO server starting on http://0.0.0.0:5000")
     # Use eventlet's WSGI server through socketio.run()
     socketio.run(app, host='0.0.0.0', port=5000)
