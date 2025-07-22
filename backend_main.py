@@ -1,21 +1,28 @@
 ﻿from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
-from flask_cors import CORS  # <-- Import CORS
+from flask_cors import CORS
 import time
 import eventlet
-eventlet.monkey_patch()  # Patch stdlib for async support with eventlet
+
+eventlet.monkey_patch()  # Must be called before any standard library imports
 
 app = Flask(__name__)
-# Enable CORS for your frontend origins (or * for dev)
-CORS(app, resources={r"/*": {"origins": ["*", "https://yourusername.github.io"]}})  # <-- Add your GitHub Pages URL here
 
-# Explicitly specify async_mode='eventlet'
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')  # Allow all origins for dev
+# === CORS Configuration ===
+CORS(app, resources={r"/*": {"origins": "*"}})  # Use "*" for development. Change in production.
 
-# In-memory event log
+# === SocketIO Configuration ===
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+
+# === In-memory event log (for optional debugging) ===
 event_log = []
 
-# === Endpoint: Receive event from Arduino-PC ===
+# === Routes ===
+
+@app.route('/')
+def home():
+    return jsonify({"status": "ok", "message": "Arduino backend is running."})
+
 @app.route('/event', methods=['POST'])
 def receive_event():
     data = request.get_json()
@@ -28,14 +35,12 @@ def receive_event():
         'timestamp': data.get('timestamp', time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()))
     }
 
-    # Log and emit
-    print(f"Received event: {event}")
+    print(f"📥 Received event: {event}")
     event_log.append(event)
     socketio.emit('event_data', event, namespace='/ui')
 
     return jsonify({'status': 'received'}), 200
 
-# === New Endpoint: Receive command from Web UI ===
 @app.route('/command', methods=['POST'])
 def receive_command():
     data = request.get_json()
@@ -43,39 +48,38 @@ def receive_command():
         return jsonify({'error': 'No command provided'}), 400
 
     command = data['command']
-    print(f"Command received from Web UI: {command}")
+    print(f"🧭 Command received from Web UI: {command}")
 
-    # Broadcast command to all connected device clients
     socketio.emit('command', {'command': command}, namespace='/device')
 
     return jsonify({'status': 'Command broadcast'}), 200
 
-# === WebSocket Handlers ===
+# === WebSocket Events ===
+
 # From Devices
 @socketio.on('connect', namespace='/device')
 def device_connect():
-    print("Device connected")
+    print("✅ Device connected")
 
 @socketio.on('disconnect', namespace='/device')
 def device_disconnect():
-    print("Device disconnected")
+    print("🔌 Device disconnected")
 
 # From UI
 @socketio.on('connect', namespace='/ui')
 def ui_connect():
-    print("UI connected")
+    print("🖥️ UI connected")
 
 @socketio.on('disconnect', namespace='/ui')
 def ui_disconnect():
-    print("UI disconnected")
+    print("❌ UI disconnected")
 
 @socketio.on('control_command', namespace='/ui')
 def control_command(data):
-    print("Control command from UI (WebSocket):", data)
+    print("🔁 Control command from UI (WebSocket):", data)
     socketio.emit('command', data, namespace='/device')
 
-# === Run App ===
+# === Start App ===
 if __name__ == '__main__':
-    print("Flask-SocketIO server starting on http://0.0.0.0:5000")
-    # Use eventlet's WSGI server through socketio.run()
+    print("🚀 Flask-SocketIO server starting on http://0.0.0.0:5000")
     socketio.run(app, host='0.0.0.0', port=5000)
